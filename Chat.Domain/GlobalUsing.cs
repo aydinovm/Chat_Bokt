@@ -5,6 +5,5 @@ global using Chat.Common.Domain;
 #region package
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.DependencyInjection;
-global using Microsoft.Extensions.Configuration;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
 #endregion
