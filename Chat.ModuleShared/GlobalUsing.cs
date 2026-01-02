@@ -1,7 +1,6 @@
 ﻿#region application
 global using Chat.Common.Persistence;
 global using Chat.ModuleShared.Data;
-global using Chat.Persistence.Repositories;
 global using Chat.Common.Domain;
 global using Chat.ModuleShared.Extensions;
 #endregion

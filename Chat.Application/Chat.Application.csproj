@@ -18,12 +18,10 @@
   <ItemGroup>
     <Folder Include="Features\Account\Commands\" />
     <Folder Include="Features\Account\Queries\" />
-    <Folder Include="Features\User\Commands\" />
-    <Folder Include="Features\User\Queries\" />
+    <Folder Include="Features\ChatReassignmentHistory\Commands\" />
     <Folder Include="Handlers\Account\Commands\" />
     <Folder Include="Handlers\Account\Queries\" />
-    <Folder Include="Handlers\User\Commands\" />
-    <Folder Include="Handlers\User\Queries\" />
+    <Folder Include="Handlers\ChatReassignmentHistory\Commands\" />
   </ItemGroup>
 
 </Project>

@@ -35,7 +35,6 @@ namespace Chat.Persistence
 
         public DbSet<MessageModel> Messages { get; set; }
         public DbSet<ChatRequestModel> ChatRequests { get; set; }
-
         public DbSet<UserModel> Users { get; set; }
         public DbSet<DepartmentModel> Departments { get; set; }
         public DbSet<ChatReassignmentHistoryModel> ChatReassignmentHistory { get; set; }

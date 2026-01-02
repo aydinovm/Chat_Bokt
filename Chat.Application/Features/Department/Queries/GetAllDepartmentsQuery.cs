@@ -3,8 +3,8 @@ using MediatR;
 
 namespace Chat.Application.Features
 {
-    public class GetAllDepartmentsQuery : IRequest<List<DepartmentResponse>>
+    public class GetAllDepartmentsQuery : IRequest<List<DepartmentDetailResponse>>
     {
-        public bool? IsActive { get; set; } // Фильтр по активности (опционально)
+        public bool? IsActive { get; set; } 
     }
 }
