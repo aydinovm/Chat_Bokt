@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chat.Application.Handlers
 {
-    public class LoginCommandHandler
-        : IRequestHandler<LoginCommand, Result<LoginResponse>>
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponse>>
     {
         private readonly CoreDbContext _context;
 
@@ -17,11 +16,8 @@ namespace Chat.Application.Handlers
             _context = context;
         }
 
-        public async Task<Result<LoginResponse>> Handle(
-            LoginCommand request,
-            CancellationToken cancellationToken)
+        public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
-            // TODO: Hash password before comparing
             var user = await _context.Users
                 .Where(x => x.Username == request.Username
                     && x.Password == request.Password
@@ -46,8 +42,6 @@ namespace Chat.Application.Handlers
 
             if (user == null)
                 return Result<LoginResponse>.Failure("Invalid username or password");
-
-            // TODO: Generate JWT token
 
             return Result<LoginResponse>.Success(user);
         }

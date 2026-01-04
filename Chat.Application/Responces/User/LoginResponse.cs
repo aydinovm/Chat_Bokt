@@ -15,7 +15,9 @@ namespace Chat.Application.Responces
         public string DepartmentName { get; set; }
         public string DepartmentType { get; set; }
         public bool IsDepartmentAdmin { get; set; }
-        // TODO: Add JWT token here
-        // public string Token { get; set; }
+
+        // JWT поля
+        public string Token { get; set; }
+        public DateTime ExpiresAt { get; set; }
     }
 }
