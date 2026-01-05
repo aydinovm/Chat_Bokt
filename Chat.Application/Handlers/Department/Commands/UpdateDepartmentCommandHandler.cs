@@ -21,30 +21,32 @@ namespace Chat.Application.Handlers
             CancellationToken cancellationToken)
         {
             var department = await _context.Departments
-                .FirstOrDefaultAsync(x => x.Id == request.DepartmentId
-                    && !x.IsDeleted,
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.DepartmentId &&
+                    !x.IsDeleted,
                     cancellationToken);
 
             if (department == null)
                 return Result<Unit>.Failure("Department not found");
 
-            // Проверяем что имя не занято другим департаментом
             var nameExists = await _context.Departments
-                .AnyAsync(x => x.Name == request.Name
-                    && x.Id != request.DepartmentId
-                    && !x.IsDeleted,
+                .AnyAsync(x =>
+                    x.Name == request.Name &&
+                    x.Id != request.DepartmentId &&
+                    !x.IsDeleted,
                     cancellationToken);
 
             if (nameExists)
                 return Result<Unit>.Failure("Department with this name already exists");
 
             department.Name = request.Name;
-            department.Type = request.Type;
+            department.Type = request.Type; // ✅ enum
             department.IsActive = request.IsActive;
 
             await _context.SaveChangesAsync(cancellationToken);
 
             return Result<Unit>.Success(Unit.Value);
         }
+
     }
 }

@@ -21,10 +21,10 @@ namespace Chat.Application.Handlers
             CreateDepartmentCommand request,
             CancellationToken cancellationToken)
         {
-            // Проверяем что департамент с таким именем не существует
             var exists = await _context.Departments
-                .AnyAsync(x => x.Name == request.Name
-                    && !x.IsDeleted,
+                .AnyAsync(x =>
+                    x.Name == request.Name &&
+                    !x.IsDeleted,
                     cancellationToken);
 
             if (exists)
@@ -34,7 +34,7 @@ namespace Chat.Application.Handlers
             {
                 Id = Guid.NewGuid(),
                 Name = request.Name,
-                Type = request.Type,
+                Type = request.Type, // ✅ enum → enum
                 IsActive = true,
                 IsDeleted = false
             };
@@ -44,5 +44,6 @@ namespace Chat.Application.Handlers
 
             return Result<Guid>.Success(department.Id);
         }
+
     }
 }

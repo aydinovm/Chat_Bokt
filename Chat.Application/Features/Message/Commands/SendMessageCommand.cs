@@ -1,4 +1,5 @@
 ﻿using Chat.Common.Helpers;
+using Chat.Domain.Enums;
 using MediatR;
 
 namespace Chat.Application.Features
@@ -8,7 +9,7 @@ namespace Chat.Application.Features
         public Guid ChatRequestId { get; set; }
         public Guid SenderUserId { get; set; }
         public Guid SenderDepartmentId { get; set; }
-        public string Type { get; set; } // "Text", "Image", "File"
+        public MessageTypeEnum Type { get; set; } // "Text", "Image", "File"
         public string Text { get; set; }
         public string FileUrl { get; set; }
     }

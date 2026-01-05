@@ -12,30 +12,12 @@ namespace Chat.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ChatReassignmentHistory",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ChatRequestId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ReassignedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    OldAssignedUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    NewAssignedUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Reason = table.Column<string>(type: "text", nullable: false),
-                    ReassignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatReassignmentHistory", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Departments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    Type = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
@@ -55,17 +37,17 @@ namespace Chat.Persistence.Migrations
                     DepartmentId = table.Column<Guid>(type: "uuid", nullable: false),
                     IsDepartmentAdmin = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    DepartmentModelId = table.Column<Guid>(type: "uuid", nullable: true)
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Users_Departments_DepartmentModelId",
-                        column: x => x.DepartmentModelId,
+                        name: "FK_Users_Departments_DepartmentId",
+                        column: x => x.DepartmentId,
                         principalTable: "Departments",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -77,28 +59,69 @@ namespace Chat.Persistence.Migrations
                     FromDepartmentId = table.Column<Guid>(type: "uuid", nullable: false),
                     ToDepartmentId = table.Column<Guid>(type: "uuid", nullable: false),
                     AssignedToUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ModifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    UserModelId = table.Column<Guid>(type: "uuid", nullable: true),
-                    UserModelId1 = table.Column<Guid>(type: "uuid", nullable: true)
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ChatRequests", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ChatRequests_Users_UserModelId",
-                        column: x => x.UserModelId,
+                        name: "FK_ChatRequests_Users_AssignedToUserId",
+                        column: x => x.AssignedToUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ChatRequests_Users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChatReassignmentHistory",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ChatRequestId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ReassignedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OldAssignedUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    NewAssignedUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Reason = table.Column<string>(type: "text", nullable: true),
+                    ReassignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChatReassignmentHistory", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChatReassignmentHistory_ChatRequests_ChatRequestId",
+                        column: x => x.ChatRequestId,
+                        principalTable: "ChatRequests",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatReassignmentHistory_Users_NewAssignedUserId",
+                        column: x => x.NewAssignedUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatReassignmentHistory_Users_OldAssignedUserId",
+                        column: x => x.OldAssignedUserId,
                         principalTable: "Users",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ChatRequests_Users_UserModelId1",
-                        column: x => x.UserModelId1,
+                        name: "FK_ChatReassignmentHistory_Users_ReassignedByUserId",
+                        column: x => x.ReassignedByUserId,
                         principalTable: "Users",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -107,32 +130,36 @@ namespace Chat.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ChatRequestId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SenderDepartmentId = table.Column<Guid>(type: "uuid", nullable: false),
                     SenderUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Type = table.Column<string>(type: "text", nullable: false),
-                    Text = table.Column<string>(type: "text", nullable: false),
-                    FileUrl = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    Text = table.Column<string>(type: "text", nullable: true),
+                    FileUrl = table.Column<string>(type: "text", nullable: true),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false),
                     ReadAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
-                    ChatRequestModelId = table.Column<Guid>(type: "uuid", nullable: true),
-                    UserModelId = table.Column<Guid>(type: "uuid", nullable: true)
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Messages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Messages_ChatRequests_ChatRequestModelId",
-                        column: x => x.ChatRequestModelId,
+                        name: "FK_Messages_ChatRequests_ChatRequestId",
+                        column: x => x.ChatRequestId,
                         principalTable: "ChatRequests",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Messages_Users_UserModelId",
-                        column: x => x.UserModelId,
+                        name: "FK_Messages_Users_SenderUserId",
+                        column: x => x.SenderUserId,
                         principalTable: "Users",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatReassignmentHistory_ChatRequestId",
+                table: "ChatReassignmentHistory",
+                column: "ChatRequestId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatReassignmentHistory_IsDeleted",
@@ -140,19 +167,34 @@ namespace Chat.Persistence.Migrations
                 column: "IsDeleted");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChatReassignmentHistory_NewAssignedUserId",
+                table: "ChatReassignmentHistory",
+                column: "NewAssignedUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatReassignmentHistory_OldAssignedUserId",
+                table: "ChatReassignmentHistory",
+                column: "OldAssignedUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatReassignmentHistory_ReassignedByUserId",
+                table: "ChatReassignmentHistory",
+                column: "ReassignedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatRequests_AssignedToUserId",
+                table: "ChatRequests",
+                column: "AssignedToUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatRequests_CreatedByUserId",
+                table: "ChatRequests",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChatRequests_IsDeleted",
                 table: "ChatRequests",
                 column: "IsDeleted");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatRequests_UserModelId",
-                table: "ChatRequests",
-                column: "UserModelId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatRequests_UserModelId1",
-                table: "ChatRequests",
-                column: "UserModelId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Departments_IsDeleted",
@@ -160,9 +202,9 @@ namespace Chat.Persistence.Migrations
                 column: "IsDeleted");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Messages_ChatRequestModelId",
+                name: "IX_Messages_ChatRequestId",
                 table: "Messages",
-                column: "ChatRequestModelId");
+                column: "ChatRequestId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Messages_IsDeleted",
@@ -170,14 +212,14 @@ namespace Chat.Persistence.Migrations
                 column: "IsDeleted");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Messages_UserModelId",
+                name: "IX_Messages_SenderUserId",
                 table: "Messages",
-                column: "UserModelId");
+                column: "SenderUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Users_DepartmentModelId",
+                name: "IX_Users_DepartmentId",
                 table: "Users",
-                column: "DepartmentModelId");
+                column: "DepartmentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_IsDeleted",

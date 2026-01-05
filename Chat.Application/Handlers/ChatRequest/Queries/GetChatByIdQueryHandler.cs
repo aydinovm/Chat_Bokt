@@ -61,7 +61,7 @@ namespace Chat.Application.Handlers
                 FromDepartmentId = chat.Chat.FromDepartmentId,
                 ToDepartmentId = chat.Chat.ToDepartmentId,
                 AssignedToUserId = chat.Chat.AssignedToUserId,
-                Status = chat.Chat.Status,
+                Status = chat.Chat.Status.ToString(),
                 Title = chat.Chat.Title,
                 Description = chat.Chat.Description,
                 CreatedDate = chat.Chat.CreatedDate,

@@ -22,8 +22,10 @@ namespace Chat.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             ConfigureMappings(modelBuilder);
         }
+
 
 
         protected void ConfigureMappings(ModelBuilder modelBuilder)

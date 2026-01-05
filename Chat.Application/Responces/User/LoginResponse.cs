@@ -12,11 +12,9 @@ namespace Chat.Application.Responces
         public string FullName { get; set; }
         public string Username { get; set; }
         public Guid DepartmentId { get; set; }
-        public string DepartmentName { get; set; }
-        public string DepartmentType { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? DepartmentType { get; set; }
         public bool IsDepartmentAdmin { get; set; }
-
-        // JWT поля
         public string Token { get; set; }
         public DateTime ExpiresAt { get; set; }
     }

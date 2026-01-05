@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Chat.Persistence.Migrations
 {
     [DbContext(typeof(CoreDbContext))]
-    [Migration("20260104110107_FirstMigration")]
+    [Migration("20260104220614_FirstMigration")]
     partial class FirstMigration
     {
         /// <inheritdoc />
@@ -44,7 +44,6 @@ namespace Chat.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Reason")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("ReassignedAt")
@@ -55,7 +54,15 @@ namespace Chat.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChatRequestId");
+
                     b.HasIndex("IsDeleted");
+
+                    b.HasIndex("NewAssignedUserId");
+
+                    b.HasIndex("OldAssignedUserId");
+
+                    b.HasIndex("ReassignedByUserId");
 
                     b.ToTable("ChatReassignmentHistory", (string)null);
                 });
@@ -88,9 +95,8 @@ namespace Chat.Persistence.Migrations
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -99,19 +105,13 @@ namespace Chat.Persistence.Migrations
                     b.Property<Guid>("ToDepartmentId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("UserModelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("UserModelId1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("IsDeleted");
-
-                    b.HasIndex("UserModelId");
-
-                    b.HasIndex("UserModelId1");
 
                     b.ToTable("ChatRequests", (string)null);
                 });
@@ -132,9 +132,8 @@ namespace Chat.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -152,11 +151,7 @@ namespace Chat.Persistence.Migrations
                     b.Property<Guid>("ChatRequestId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ChatRequestModelId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("FileUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
@@ -168,9 +163,6 @@ namespace Chat.Persistence.Migrations
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("SenderDepartmentId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("SenderUserId")
                         .HasColumnType("uuid");
 
@@ -178,23 +170,18 @@ namespace Chat.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Text")
-                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("UserModelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ChatRequestModelId");
+                    b.HasIndex("ChatRequestId");
 
                     b.HasIndex("IsDeleted");
 
-                    b.HasIndex("UserModelId");
+                    b.HasIndex("SenderUserId");
 
                     b.ToTable("Messages", (string)null);
                 });
@@ -209,9 +196,6 @@ namespace Chat.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("DepartmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("DepartmentModelId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("FullName")
@@ -234,45 +218,99 @@ namespace Chat.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentModelId");
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("IsDeleted");
 
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("Chat.Domain.Persistence.ChatReassignmentHistoryModel", b =>
+                {
+                    b.HasOne("Chat.Domain.Persistence.ChatRequestModel", "ChatRequest")
+                        .WithMany("ReassignmentHistory")
+                        .HasForeignKey("ChatRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "NewAssignedUser")
+                        .WithMany()
+                        .HasForeignKey("NewAssignedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "OldAssignedUser")
+                        .WithMany()
+                        .HasForeignKey("OldAssignedUserId");
+
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "ReassignedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReassignedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChatRequest");
+
+                    b.Navigation("NewAssignedUser");
+
+                    b.Navigation("OldAssignedUser");
+
+                    b.Navigation("ReassignedByUser");
+                });
+
             modelBuilder.Entity("Chat.Domain.Persistence.ChatRequestModel", b =>
                 {
-                    b.HasOne("Chat.Domain.Persistence.UserModel", null)
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "AssignedToUser")
                         .WithMany("AssignedChats")
-                        .HasForeignKey("UserModelId");
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Chat.Domain.Persistence.UserModel", null)
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "CreatedByUser")
                         .WithMany("CreatedChats")
-                        .HasForeignKey("UserModelId1");
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("Chat.Domain.Persistence.MessageModel", b =>
                 {
-                    b.HasOne("Chat.Domain.Persistence.ChatRequestModel", null)
+                    b.HasOne("Chat.Domain.Persistence.ChatRequestModel", "ChatRequest")
                         .WithMany("Messages")
-                        .HasForeignKey("ChatRequestModelId");
+                        .HasForeignKey("ChatRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.HasOne("Chat.Domain.Persistence.UserModel", null)
+                    b.HasOne("Chat.Domain.Persistence.UserModel", "SenderUser")
                         .WithMany("SentMessages")
-                        .HasForeignKey("UserModelId");
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChatRequest");
+
+                    b.Navigation("SenderUser");
                 });
 
             modelBuilder.Entity("Chat.Domain.Persistence.UserModel", b =>
                 {
-                    b.HasOne("Chat.Domain.Persistence.DepartmentModel", null)
+                    b.HasOne("Chat.Domain.Persistence.DepartmentModel", "Department")
                         .WithMany("Users")
-                        .HasForeignKey("DepartmentModelId");
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("Chat.Domain.Persistence.ChatRequestModel", b =>
                 {
                     b.Navigation("Messages");
+
+                    b.Navigation("ReassignmentHistory");
                 });
 
             modelBuilder.Entity("Chat.Domain.Persistence.DepartmentModel", b =>
