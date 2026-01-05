@@ -1,25 +1,26 @@
-﻿using Chat.Application.Features;
-using Chat.Common.Helpers;
+﻿    using Chat.Application.Features;
+    using Chat.Common.Helpers;
+using Chat.Domain.Enums;
 using Chat.Domain.Persistence;
-using Chat.Persistence;
-using MediatR;
+    using Chat.Persistence;
+    using MediatR;
 
-namespace Chat.Application.Handlers
-{
-    public class CreateChatRequestCommandHandler
-           : IRequestHandler<CreateChatRequestCommand, Result<Unit>>
+    namespace Chat.Application.Handlers
     {
-        private readonly CoreDbContext _context;
-
-        public CreateChatRequestCommandHandler(CoreDbContext context)
+        public class CreateChatRequestCommandHandler
+               : IRequestHandler<CreateChatRequestCommand, Result<Unit>>
         {
-            _context = context;
-        }
+            private readonly CoreDbContext _context;
 
-        public async Task<Result<Unit>> Handle(
-            CreateChatRequestCommand request,
-            CancellationToken cancellationToken)
-        {
+            public CreateChatRequestCommandHandler(CoreDbContext context)
+            {
+                _context = context;
+            }
+
+            public async Task<Result<Unit>> Handle(
+                CreateChatRequestCommand request,
+                CancellationToken cancellationToken)
+            {
             var chat = new ChatRequestModel
             {
                 Id = Guid.NewGuid(),
@@ -28,15 +29,16 @@ namespace Chat.Application.Handlers
                 ToDepartmentId = request.ToDepartmentId,
                 Title = request.Title,
                 Description = request.Description,
-                Status = "Sent", // Статус всегда "Sent" при создании
-                CreatedDate = DateTime.UtcNow, // ← UtcNow
+                Status = ChatRequestStatusEnum.Sent,
+                CreatedDate = DateTime.UtcNow,
                 IsDeleted = false
             };
 
-            await _context.ChatRequests.AddAsync(chat, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
 
-            return Result<Unit>.Success(Unit.Value);
+            await _context.ChatRequests.AddAsync(chat, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return Result<Unit>.Success(Unit.Value);
+            }
         }
     }
-}

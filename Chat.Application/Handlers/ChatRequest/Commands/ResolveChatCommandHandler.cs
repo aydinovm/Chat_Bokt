@@ -1,5 +1,6 @@
 ﻿using Chat.Application.Features;
 using Chat.Common.Helpers;
+using Chat.Domain.Enums;
 using Chat.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +45,7 @@ namespace Chat.Application.Handlers
             if (!canResolve)
                 return Result<Unit>.Failure("You don't have permission to resolve this chat");
 
-            chat.Status = "Resolved";
+            chat.Status = ChatRequestStatusEnum.Resolved;
             chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);

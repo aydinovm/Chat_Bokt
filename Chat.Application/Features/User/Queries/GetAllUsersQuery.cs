@@ -5,6 +5,6 @@ namespace Chat.Application.Features
 {
     public class GetAllUsersQuery : IRequest<List<UserResponse>>
     {
-        public Guid? DepartmentId { get; set; } // Фильтр по департаменту
+        public Guid? DepartmentId { get; set; }
     }
 }

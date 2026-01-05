@@ -1,5 +1,6 @@
 ﻿using Chat.Application.Features;
 using Chat.Application.Responces.Department;
+using Chat.Domain.Enums;
 using Chat.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -20,18 +21,18 @@ namespace Chat.Application.Handlers
             GetDepartmentByIdQuery request,
             CancellationToken cancellationToken)
         {
-            var department = await _context.Departments
+            return await _context.Departments
                 .Where(x => x.Id == request.DepartmentId && !x.IsDeleted)
                 .Select(x => new DepartmentDetailResponse
                 {
                     Id = x.Id,
                     Name = x.Name,
-                    Type = x.Type,
+                    Type = x.Type.ToString(),
                     IsActive = x.IsActive,
                     UsersCount = x.Users.Count(u => !u.IsDeleted),
                     ActiveChatsCount = _context.ChatRequests.Count(c =>
                         (c.FromDepartmentId == x.Id || c.ToDepartmentId == x.Id)
-                        && c.Status != "Resolved"
+                        && c.Status != ChatRequestStatusEnum.Resolved
                         && !c.IsDeleted),
                     Users = x.Users
                         .Where(u => !u.IsDeleted)
@@ -45,8 +46,6 @@ namespace Chat.Application.Handlers
                         .ToList()
                 })
                 .FirstOrDefaultAsync(cancellationToken);
-
-            return department;
         }
     }
 }

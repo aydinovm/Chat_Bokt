@@ -22,7 +22,6 @@ namespace Chat.API.Services.Facades
 
         public async Task<LoginResponse> Login(LoginCommand command)
         {
-            // Получаем данные пользователя из хандлера
             var result = await _mediator.Send(command);
 
             if (!result.IsSuccess)
@@ -30,7 +29,6 @@ namespace Chat.API.Services.Facades
 
             var user = result.Data;
 
-            // Генерируем JWT токен в API слое
             var token = _jwtService.GenerateToken(
                 userId: user.UserId,
                 username: user.Username,
@@ -40,8 +38,6 @@ namespace Chat.API.Services.Facades
             );
 
             var expHours = int.Parse(_config["Jwt:ExpirationHours"] ?? "8");
-
-            // Добавляем токен к ответу
             user.Token = token;
             user.ExpiresAt = DateTime.UtcNow.AddHours(expHours);
 

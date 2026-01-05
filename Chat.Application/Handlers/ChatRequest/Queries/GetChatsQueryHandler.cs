@@ -29,7 +29,7 @@ namespace Chat.Application.Handlers
                 {
                     Id = x.Id,
                     Title = x.Title,
-                    Status = x.Status,
+                    Status = x.Status.ToString(),
                     CreatedDate = x.CreatedDate,
                     CreatedByUserId = x.CreatedByUserId,
                     FromDepartmentId = x.FromDepartmentId,

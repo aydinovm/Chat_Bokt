@@ -2,19 +2,31 @@
 {
     public class UserModel : BaseEntity, IEntity
     {
-        public string FullName { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
+        // Обязательные данные
+        public string FullName { get; set; } = null!;
+        public string Username { get; set; } = null!;
+        public string Password { get; set; } = null!;
 
+        // Связь с департаментом — ВСЕГДА есть
         public Guid DepartmentId { get; set; }
+        public DepartmentModel Department { get; set; } = null!;
+
         public bool IsDepartmentAdmin { get; set; }
 
+        // Заполняется при создании
         public DateTime CreatedDate { get; set; }
 
-        public ICollection<MessageModel> SentMessages { get; set; } // ← Добавил
-        public ICollection<ChatRequestModel> CreatedChats { get; set; } // ← Добавил
-        public ICollection<ChatRequestModel> AssignedChats { get; set; } // ← Добавил
+        // Навигации (никогда не null)
+        public ICollection<ChatRequestModel> CreatedChats { get; set; }
+            = new HashSet<ChatRequestModel>();
 
+        public ICollection<ChatRequestModel> AssignedChats { get; set; }
+            = new HashSet<ChatRequestModel>();
+
+        public ICollection<MessageModel> SentMessages { get; set; }
+            = new HashSet<MessageModel>();
+
+        // Soft delete
         public bool IsDeleted { get; set; }
     }
 }
