@@ -1,5 +1,6 @@
 ﻿using Chat.Application.Features;
 using Chat.Common.Helpers;
+using Chat.Domain.Enums;
 using Chat.Domain.Persistence;
 using Chat.Persistence;
 using MediatR;
@@ -68,12 +69,11 @@ namespace Chat.Application.Handlers
 
             await _context.Messages.AddAsync(message, cancellationToken);
 
-            // Если чат был "Sent" → становится "Viewed"
-            if (chat.Status == Chat.Domain.Enums.ChatRequestStatusEnum.Sent)
+            if (chat.Status == ChatRequestStatusEnum.Sent)
             {
-                chat.Status = Chat.Domain.Enums.ChatRequestStatusEnum.Viewed;
-                chat.ModifiedDate = DateTime.UtcNow;
+                chat.Status = ChatRequestStatusEnum.Viewed;
             }
+
 
             await _context.SaveChangesAsync(cancellationToken);
 

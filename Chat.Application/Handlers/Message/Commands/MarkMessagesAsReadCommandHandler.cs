@@ -1,5 +1,6 @@
 ﻿using Chat.Application.Features;
 using Chat.Common.Helpers;
+using Chat.Domain.Enums;
 using Chat.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,12 @@ namespace Chat.Application.Handlers
             {
                 message.IsRead = true;
                 message.ReadAt = DateTime.UtcNow;
+            }
+
+            if (chat.Status == ChatRequestStatusEnum.Sent)
+            {
+                chat.Status = ChatRequestStatusEnum.Viewed;
+                chat.ModifiedDate = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
