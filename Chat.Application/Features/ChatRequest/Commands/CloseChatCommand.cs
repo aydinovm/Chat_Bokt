@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Chat.Application.Features
+{ 
     public class CloseChatCommand : BaseCommand, IRequest<Result<Unit>>
     {
         public Guid ChatRequestId { get; set; }
