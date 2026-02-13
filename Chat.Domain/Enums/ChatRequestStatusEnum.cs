@@ -4,6 +4,7 @@
     {
         Sent = 0,
         Viewed = 1,
-        Resolved = 2
+        Resolved = 2,
+        Closed = 3 
     }
 }

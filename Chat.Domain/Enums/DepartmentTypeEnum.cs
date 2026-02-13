@@ -6,5 +6,6 @@
         Finance = 2,
         Marketing = 3,
         IT = 4,
+        Control = 5  
     }
 }

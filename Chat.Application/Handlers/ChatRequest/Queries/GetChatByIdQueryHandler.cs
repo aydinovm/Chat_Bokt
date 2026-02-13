@@ -1,5 +1,6 @@
 ﻿using Chat.Application.Features;
 using Chat.Application.Responces.ChatRequest;
+using Chat.Application.Tags;
 using Chat.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -16,58 +17,62 @@ namespace Chat.Application.Handlers
             _context = context;
         }
 
-        public async Task<ChatRequestDetailResponse> Handle(
-            GetChatByIdQuery request,
-            CancellationToken cancellationToken)
+        public async Task<ChatRequestDetailResponse> Handle(GetChatByIdQuery request, CancellationToken cancellationToken)
         {
-            // Проверяем доступ пользователя
             var user = await _context.Users
-                .FirstOrDefaultAsync(x => x.Id == request.UserId
-                    && !x.IsDeleted,
-                    cancellationToken);
+                .Include(u => u.Department)
+                .FirstOrDefaultAsync(x => x.Id == request.UserId && !x.IsDeleted, cancellationToken);
 
             if (user == null)
                 return null;
 
-            var chat = await _context.ChatRequests
+            bool isSuperAdmin = user.IsSuperAdmin();
+
+            var chatWrap = await _context.ChatRequests
                 .Where(x => x.Id == request.ChatRequestId && !x.IsDeleted)
                 .Select(x => new
                 {
                     Chat = x,
                     TotalMessages = x.Messages.Count(m => !m.IsDeleted),
-                    UnreadMessages = x.Messages.Count(m => !m.IsDeleted
-                        && !m.IsRead
-                        && m.SenderUserId != request.UserId)
+                    UnreadMessages = x.Messages.Count(m =>
+                        !m.IsDeleted &&
+                        !m.IsRead &&
+                        m.SenderUserId != request.UserId)
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (chat == null)
+            if (chatWrap == null)
                 return null;
 
-            // Проверяем что пользователь имеет доступ к чату
-            bool hasAccess = chat.Chat.FromDepartmentId == user.DepartmentId
-                || chat.Chat.ToDepartmentId == user.DepartmentId
-                || chat.Chat.AssignedToUserId == request.UserId
-                || chat.Chat.CreatedByUserId == request.UserId
-                || user.IsDepartmentAdmin; // IT админ видит все
+            var chat = chatWrap.Chat;
+
+            bool isDeptAdmin = user.IsDepartmentAdmin;
+
+            bool hasAccess =
+                isSuperAdmin
+                || (isDeptAdmin && chat.ToDepartmentId == user.DepartmentId) // ✅ департ-админ только свои входящие
+                || chat.AssignedToUserId == request.UserId
+                || chat.CreatedByUserId == request.UserId
+                || chat.FromDepartmentId == user.DepartmentId
+                || chat.ToDepartmentId == user.DepartmentId;
 
             if (!hasAccess)
                 return null;
 
             return new ChatRequestDetailResponse
             {
-                Id = chat.Chat.Id,
-                CreatedByUserId = chat.Chat.CreatedByUserId,
-                FromDepartmentId = chat.Chat.FromDepartmentId,
-                ToDepartmentId = chat.Chat.ToDepartmentId,
-                AssignedToUserId = chat.Chat.AssignedToUserId,
-                Status = chat.Chat.Status.ToString(),
-                Title = chat.Chat.Title,
-                Description = chat.Chat.Description,
-                CreatedDate = chat.Chat.CreatedDate,
-                ModifiedDate = chat.Chat.ModifiedDate,
-                TotalMessagesCount = chat.TotalMessages,
-                UnreadMessagesCount = chat.UnreadMessages
+                Id = chat.Id,
+                CreatedByUserId = chat.CreatedByUserId,
+                FromDepartmentId = chat.FromDepartmentId,
+                ToDepartmentId = chat.ToDepartmentId,
+                AssignedToUserId = chat.AssignedToUserId,
+                Status = chat.Status.ToString(),
+                Title = chat.Title,
+                Description = chat.Description,
+                CreatedDate = chat.CreatedDate,
+                ModifiedDate = chat.ModifiedDate,
+                TotalMessagesCount = chatWrap.TotalMessages,
+                UnreadMessagesCount = chatWrap.UnreadMessages
             };
         }
     }

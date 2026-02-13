@@ -1,4 +1,5 @@
 ﻿using Chat.Application.Features;
+using Chat.Application.Tags;
 using Chat.Common.Helpers;
 using Chat.Domain.Persistence;
 using Chat.Persistence;
@@ -17,50 +18,56 @@ namespace Chat.Application.Handlers
             _context = context;
         }
 
-        public async Task<Result<Unit>> Handle(
-            ReassignChatCommand request,
-            CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(ReassignChatCommand request, CancellationToken cancellationToken)
         {
-            // Проверяем что пользователь - IT админ
-            var admin = await _context.Users
-                .FirstOrDefaultAsync(x => x.Id == request.ReassignedByUserId
-                    && x.IsDepartmentAdmin
-                    && !x.IsDeleted,
+            var actor = await _context.Users
+                .Include(u => u.Department)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.ReassignedByUserId &&
+                    x.IsDepartmentAdmin &&
+                    !x.IsDeleted,
                     cancellationToken);
 
-            if (admin == null)
-                return Result<Unit>.Failure("Only IT department admin can reassign chats");
+            if (actor == null)
+                return Result<Unit>.Failure("Only department admin can reassign chats");
+
+            bool isSuperAdmin = actor.IsSuperAdmin();
 
             var chat = await _context.ChatRequests
-                .FirstOrDefaultAsync(x => x.Id == request.ChatRequestId
-                    && !x.IsDeleted,
-                    cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == request.ChatRequestId && !x.IsDeleted, cancellationToken);
 
             if (chat == null)
                 return Result<Unit>.Failure("Chat request not found");
 
-            // Проверяем что чат принадлежит IT департаменту
-            if (chat.ToDepartmentId != admin.DepartmentId)
+            // DepartmentAdmin: только свои входящие
+            if (!isSuperAdmin && chat.ToDepartmentId != actor.DepartmentId)
                 return Result<Unit>.Failure("You can only reassign chats in your department");
 
-            // Проверяем что новый исполнитель существует и из IT департамента
+            // Новый исполнитель
             var newAssignee = await _context.Users
-                .FirstOrDefaultAsync(x => x.Id == request.NewAssignedUserId
-                    && x.DepartmentId == admin.DepartmentId
-                    && !x.IsDeleted,
+                .Include(u => u.Department)
+                .FirstOrDefaultAsync(x =>
+                    x.Id == request.NewAssignedUserId &&
+                    !x.IsDeleted,
                     cancellationToken);
 
             if (newAssignee == null)
-                return Result<Unit>.Failure("New assignee not found or not in IT department");
+                return Result<Unit>.Failure("New assignee not found");
 
-            // Сохраняем историю переназначения
+            // DepartmentAdmin: только внутри департамента
+            if (!isSuperAdmin && newAssignee.DepartmentId != actor.DepartmentId)
+                return Result<Unit>.Failure("New assignee must be in your department");
+
+            // История
             var history = new ChatReassignmentHistoryModel
             {
                 Id = Guid.NewGuid(),
-                ChatRequestId = request.ChatRequestId,
-                ReassignedByUserId = request.ReassignedByUserId,
+                ChatRequestId = chat.Id,
+                ReassignedByUserId = actor.Id,
                 OldAssignedUserId = chat.AssignedToUserId,
-                NewAssignedUserId = request.NewAssignedUserId,
+                NewAssignedUserId = newAssignee.Id,
+                OldToDepartmentId = chat.ToDepartmentId,
+                NewToDepartmentId = newAssignee.DepartmentId,
                 Reason = request.Reason,
                 ReassignedAt = DateTime.UtcNow,
                 IsDeleted = false
@@ -69,7 +76,12 @@ namespace Chat.Application.Handlers
             await _context.ChatReassignmentHistory.AddAsync(history, cancellationToken);
 
             // Обновляем чат
-            chat.AssignedToUserId = request.NewAssignedUserId;
+            chat.AssignedToUserId = newAssignee.Id;
+
+            // ✅ Если SuperAdmin назначил в другой департамент — переносим чат
+            if (isSuperAdmin && chat.ToDepartmentId != newAssignee.DepartmentId)
+                chat.ToDepartmentId = newAssignee.DepartmentId;
+
             chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);

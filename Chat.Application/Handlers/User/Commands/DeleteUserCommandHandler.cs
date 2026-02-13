@@ -17,8 +17,13 @@ namespace Chat.Application.Handlers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId && !u.IsDeleted, cancellationToken);
             if (user == null) return Result<Unit>.Failure("User not found");
 
-            var hasActiveChats = await _context.ChatRequests.AnyAsync(c => c.AssignedToUserId == request.UserId && c.Status != ChatRequestStatusEnum.Resolved
- && !c.IsDeleted, cancellationToken);
+            var hasActiveChats = await _context.ChatRequests.AnyAsync(c =>
+                c.AssignedToUserId == request.UserId
+                && c.Status != ChatRequestStatusEnum.Resolved
+                && c.Status != ChatRequestStatusEnum.Closed
+                && !c.IsDeleted,
+                cancellationToken);
+
             if (hasActiveChats) return Result<Unit>.Failure("Cannot delete user with active assigned chats");
 
             user.IsDeleted = true;

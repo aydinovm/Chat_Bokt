@@ -2,7 +2,6 @@
 using Chat.Application.Responces.ChatRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Chat.API.Controllers
 {
@@ -11,17 +10,8 @@ namespace Chat.API.Controllers
     [Authorize]
     public class ChatRequestController : BaseController
     {
-        private Guid CurrentUserId =>
-            Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-        private Guid? CurrentDepartmentId =>
-            Guid.TryParse(User.FindFirst("departmentId")?.Value, out var id) ? id : null;
-
-        private bool IsDepartmentAdmin =>
-            bool.TryParse(User.FindFirst("isDepartmentAdmin")?.Value, out var v) && v;
-
         // =========================
-        // GET: api/chat/{id}
+        // GET: api/chat-requests/{id}
         // =========================
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ChatRequestDetailResponse>> GetById(Guid id)
@@ -41,17 +31,15 @@ namespace Chat.API.Controllers
         }
 
         // =========================
-        // GET: api/chat
+        // GET: api/chat-requests
         // =========================
         [HttpGet]
         public async Task<ActionResult<List<ChatRequestResponse>>> GetAll()
         {
-            if (CurrentDepartmentId == null)
-                return Forbid();
-
+            // ✅ Важно: не берём departmentId из JWT. Handler сам определит что отдавать по UserId.
             var query = new GetChatsQuery
             {
-                DepartmentId = CurrentDepartmentId.Value
+                UserId = CurrentUserId
             };
 
             var result = await Mediator.Send(query);
@@ -59,12 +47,20 @@ namespace Chat.API.Controllers
         }
 
         // =========================
-        // POST: api/chat
+        // POST: api/chat-requests
         // =========================
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateChatRequestCommand command)
         {
+            if (command == null)
+                return BadRequest("Invalid request body");
+
             command.CreatedByUserId = CurrentUserId;
+
+            // ⚠️ Рекомендация:
+            // Не доверяй FromDepartmentId с фронта.
+            // Лучше в handler брать FromDepartmentId из пользователя CreatedByUserId.
+            // (даже если пока не меняешь команду — в handler зафиксируй)
 
             var result = await Mediator.Send(command);
 
@@ -75,15 +71,13 @@ namespace Chat.API.Controllers
         }
 
         // =========================
-        // PUT: api/chat/{id}/reassign
+        // PUT: api/chat-requests/{id}/reassign
         // =========================
         [HttpPut("{id:guid}/reassign")]
-        public async Task<IActionResult> Reassign(
-            Guid id,
-            [FromBody] ReassignChatCommand command)
+        public async Task<IActionResult> Reassign(Guid id, [FromBody] ReassignChatCommand command)
         {
-            if (!IsDepartmentAdmin)
-                return Forbid();
+            if (command == null)
+                return BadRequest("Invalid request body");
 
             command.ChatRequestId = id;
             command.ReassignedByUserId = CurrentUserId;
@@ -93,11 +87,11 @@ namespace Chat.API.Controllers
             if (!result.IsSuccess)
                 return BadRequest(new { error = result.Error });
 
-            return Ok();
+            return NoContent();
         }
 
         // =========================
-        // PUT: api/chat/{id}/resolve
+        // PUT: api/chat-requests/{id}/resolve
         // =========================
         [HttpPut("{id:guid}/resolve")]
         public async Task<IActionResult> Resolve(Guid id)
@@ -115,6 +109,25 @@ namespace Chat.API.Controllers
 
             return Ok();
         }
+
+        // =========================
+        // PUT: api/chat-requests/{id}/close
+        // (только SuperAdmin проверит handler)
+        // =========================
+        [HttpPut("{id:guid}/close")]
+        public async Task<IActionResult> Close(Guid id, [FromBody] CloseChatCommand? command)
+        {
+            command ??= new CloseChatCommand();
+
+            command.ChatRequestId = id;
+            command.ClosedByUserId = CurrentUserId;
+
+            var result = await Mediator.Send(command);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { error = result.Error });
+
+            return Ok();
+        }
     }
 }
-

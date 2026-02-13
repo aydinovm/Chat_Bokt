@@ -7,6 +7,7 @@ namespace Chat.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous]
     public class AuthController : BaseController
     {
         private readonly AuthServiceFacade _authFacade;
