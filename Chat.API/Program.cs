@@ -1,8 +1,9 @@
 ﻿using Chat.API.Extensions;
+using Chat.API.Hubs;              // ✅ добавь
 using Chat.Application.Handlers;
 using Chat.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -10,6 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// ✅ SignalR (обязательно, иначе IHubContext не зарегистрируется)
+builder.Services.AddSignalR();
 
 // Swagger/OpenAPI configuration
 builder.Services.AddEndpointsApiExplorer();
@@ -64,20 +68,34 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-        ClockSkew = TimeSpan.Zero // Убирает дефолтную задержку в 5 минут
+        ClockSkew = TimeSpan.Zero
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                context.Token = accessToken;
+
+            return Task.CompletedTask;
+        }
     };
 });
 
 builder.Services.AddAuthorization();
 
-// Application Services (используя Extension методы)
+// Application Services
 builder.Services.AddAppServices(builder.Configuration);
 
-// MediatR - регистрация всех хандлеров из Assembly
+// MediatR
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(LoginCommandHandler).Assembly));
 
-// CORS (опционально, если нужно для фронтенда)
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -90,7 +108,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -99,13 +116,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// CORS (если включили выше)
 app.UseCors("AllowAll");
 
-// ВАЖНО! Порядок middleware имеет значение:
-app.UseAuthentication();  // ← Должен быть ПЕРЕД Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ✅ Map Hub (без этого фронт не подключится)
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

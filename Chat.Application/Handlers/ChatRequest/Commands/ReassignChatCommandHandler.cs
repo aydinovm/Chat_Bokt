@@ -12,10 +12,12 @@ namespace Chat.Application.Handlers
         : IRequestHandler<ReassignChatCommand, Result<Unit>>
     {
         private readonly CoreDbContext _context;
+        private readonly IRealtimeNotifier _rt;
 
-        public ReassignChatCommandHandler(CoreDbContext context)
+        public ReassignChatCommandHandler(CoreDbContext context, IRealtimeNotifier rt)
         {
             _context = context;
+            _rt = rt;
         }
 
         public async Task<Result<Unit>> Handle(ReassignChatCommand request, CancellationToken cancellationToken)
@@ -39,11 +41,9 @@ namespace Chat.Application.Handlers
             if (chat == null)
                 return Result<Unit>.Failure("Chat request not found");
 
-            // DepartmentAdmin: только свои входящие
             if (!isSuperAdmin && chat.ToDepartmentId != actor.DepartmentId)
                 return Result<Unit>.Failure("You can only reassign chats in your department");
 
-            // Новый исполнитель
             var newAssignee = await _context.Users
                 .Include(u => u.Department)
                 .FirstOrDefaultAsync(x =>
@@ -54,11 +54,9 @@ namespace Chat.Application.Handlers
             if (newAssignee == null)
                 return Result<Unit>.Failure("New assignee not found");
 
-            // DepartmentAdmin: только внутри департамента
             if (!isSuperAdmin && newAssignee.DepartmentId != actor.DepartmentId)
                 return Result<Unit>.Failure("New assignee must be in your department");
 
-            // История
             var history = new ChatReassignmentHistoryModel
             {
                 Id = Guid.NewGuid(),
@@ -75,16 +73,39 @@ namespace Chat.Application.Handlers
 
             await _context.ChatReassignmentHistory.AddAsync(history, cancellationToken);
 
-            // Обновляем чат
             chat.AssignedToUserId = newAssignee.Id;
 
-            // ✅ Если SuperAdmin назначил в другой департамент — переносим чат
             if (isSuperAdmin && chat.ToDepartmentId != newAssignee.DepartmentId)
                 chat.ToDepartmentId = newAssignee.DepartmentId;
 
             chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // ✅ REALTIME: всем в чате + новому исполнителю персонально
+            await _rt.ChatReassigned(chat.Id, new
+            {
+                chatId = chat.Id,
+                reassignedByUserId = actor.Id,
+                oldAssignedUserId = history.OldAssignedUserId,
+                newAssignedUserId = history.NewAssignedUserId,
+                reason = history.Reason,
+                reassignedAt = history.ReassignedAt,
+                toDepartmentId = chat.ToDepartmentId
+            }, cancellationToken);
+
+            await _rt.NotifyUser(newAssignee.Id, "ChatAssignedToYou", new
+            {
+                chatId = chat.Id
+            }, cancellationToken);
+
+            await _rt.ChatUpdated(chat.Id, new
+            {
+                chatId = chat.Id,
+                assignedToUserId = chat.AssignedToUserId,
+                toDepartmentId = chat.ToDepartmentId,
+                modifiedDate = chat.ModifiedDate
+            }, cancellationToken);
 
             return Result<Unit>.Success(Unit.Value);
         }

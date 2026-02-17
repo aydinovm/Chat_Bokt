@@ -12,10 +12,12 @@ namespace Chat.Application.Handlers
         : IRequestHandler<CloseChatCommand, Result<Unit>>
     {
         private readonly CoreDbContext _context;
+        private readonly IRealtimeNotifier _rt;
 
-        public CloseChatCommandHandler(CoreDbContext context)
+        public CloseChatCommandHandler(CoreDbContext context, IRealtimeNotifier rt)
         {
             _context = context;
+            _rt = rt;
         }
 
         public async Task<Result<Unit>> Handle(CloseChatCommand request, CancellationToken cancellationToken)
@@ -42,6 +44,16 @@ namespace Chat.Application.Handlers
             chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // ✅ REALTIME
+            await _rt.ChatUpdated(chat.Id, new
+            {
+                chatId = chat.Id,
+                status = chat.Status.ToString(),
+                closedAt = chat.ClosedAt,
+                closedByUserId = chat.ClosedByUserId,
+                modifiedDate = chat.ModifiedDate
+            }, cancellationToken);
 
             return Result<Unit>.Success(Unit.Value);
         }

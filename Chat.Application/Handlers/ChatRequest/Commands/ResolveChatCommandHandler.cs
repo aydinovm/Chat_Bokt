@@ -1,4 +1,5 @@
 ﻿using Chat.Application.Features;
+using Chat.Application.Tags;
 using Chat.Common.Helpers;
 using Chat.Domain.Enums;
 using Chat.Persistence;
@@ -11,10 +12,12 @@ namespace Chat.Application.Handlers
         : IRequestHandler<ResolveChatCommand, Result<Unit>>
     {
         private readonly CoreDbContext _context;
+        private readonly IRealtimeNotifier _rt;
 
-        public ResolveChatCommandHandler(CoreDbContext context)
+        public ResolveChatCommandHandler(CoreDbContext context, IRealtimeNotifier rt)
         {
             _context = context;
+            _rt = rt;
         }
 
         public async Task<Result<Unit>> Handle(ResolveChatCommand request, CancellationToken cancellationToken)
@@ -34,7 +37,6 @@ namespace Chat.Application.Handlers
             if (user == null)
                 return Result<Unit>.Failure("User not found");
 
-            // Исполнитель или админ департамента чата (чей ToDepartmentId)
             bool canResolve =
                 chat.AssignedToUserId == request.ResolvedByUserId
                 || (user.IsDepartmentAdmin && user.DepartmentId == chat.ToDepartmentId);
@@ -48,6 +50,16 @@ namespace Chat.Application.Handlers
             chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // ✅ REALTIME
+            await _rt.ChatUpdated(chat.Id, new
+            {
+                chatId = chat.Id,
+                status = chat.Status.ToString(),
+                resolvedAt = chat.ResolvedAt,
+                resolvedByUserId = chat.ResolvedByUserId,
+                modifiedDate = chat.ModifiedDate
+            }, cancellationToken);
 
             return Result<Unit>.Success(Unit.Value);
         }
