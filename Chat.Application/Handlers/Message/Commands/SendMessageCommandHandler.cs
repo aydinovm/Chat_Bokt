@@ -1,4 +1,5 @@
 ﻿using Chat.Application.Features;
+using Chat.Application.Tags;
 using Chat.Common.Helpers;
 using Chat.Domain.Enums;
 using Chat.Domain.Persistence;
@@ -12,17 +13,18 @@ namespace Chat.Application.Handlers
         : IRequestHandler<SendMessageCommand, Result<Guid>>
     {
         private readonly CoreDbContext _context;
+        private readonly IRealtimeNotifier _rt;
 
-        public SendMessageCommandHandler(CoreDbContext context)
+        public SendMessageCommandHandler(CoreDbContext context, IRealtimeNotifier rt)
         {
             _context = context;
+            _rt = rt;
         }
 
         public async Task<Result<Guid>> Handle(
             SendMessageCommand request,
             CancellationToken cancellationToken)
         {
-            // Проверяем чат
             var chat = await _context.ChatRequests
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.ChatRequestId &&
@@ -32,7 +34,6 @@ namespace Chat.Application.Handlers
             if (chat == null)
                 return Result<Guid>.Failure("Chat request not found");
 
-            // Проверяем пользователя
             var user = await _context.Users
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.SenderUserId &&
@@ -42,7 +43,6 @@ namespace Chat.Application.Handlers
             if (user == null)
                 return Result<Guid>.Failure("User not found");
 
-            // Проверка доступа
             bool hasAccess =
                 chat.FromDepartmentId == user.DepartmentId ||
                 chat.ToDepartmentId == user.DepartmentId ||
@@ -53,7 +53,6 @@ namespace Chat.Application.Handlers
             if (!hasAccess)
                 return Result<Guid>.Failure("You don't have access to this chat");
 
-            // Создаём сообщение
             var message = new MessageModel
             {
                 Id = Guid.NewGuid(),
@@ -70,12 +69,33 @@ namespace Chat.Application.Handlers
             await _context.Messages.AddAsync(message, cancellationToken);
 
             if (chat.Status == ChatRequestStatusEnum.Sent)
-            {
                 chat.Status = ChatRequestStatusEnum.Viewed;
-            }
 
+            chat.ModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // ✅ REALTIME
+            await _rt.MessageSent(chat.Id, new
+            {
+                id = message.Id,
+                chatRequestId = message.ChatRequestId,
+                senderUserId = message.SenderUserId,
+                type = message.Type.ToString(),
+                text = message.Text,
+                fileUrl = message.FileUrl,
+                isRead = message.IsRead,
+                readAt = message.ReadAt,
+                sentAt = message.SentAt
+            }, cancellationToken);
+
+            // ✅ для списка чатов (если фронт показывает last message / counters)
+            await _rt.ChatUpdated(chat.Id, new
+            {
+                chatId = chat.Id,
+                status = chat.Status.ToString(),
+                modifiedDate = chat.ModifiedDate
+            }, cancellationToken);
 
             return Result<Guid>.Success(message.Id);
         }
