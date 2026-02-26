@@ -38,7 +38,7 @@ namespace Chat.API.Controllers
         public async Task<IActionResult> SendMessage(
             Guid chatId,
             [FromBody] SendMessageCommand command)
-        {
+            {
             command.ChatRequestId = chatId;
             command.SenderUserId = CurrentUserId;
 
