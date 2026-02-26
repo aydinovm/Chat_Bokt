@@ -34,7 +34,7 @@ namespace Chat.Application.Handlers
                 {
                     Id = x.Id,
                     Name = x.Name,
-                    Type = x.Type.ToString(), // 👈 enum → string ТОЛЬКО В RESPONSE
+                    Type = x.Type.ToString(), 
                     IsActive = x.IsActive,
                     UsersCount = x.Users.Count(u => !u.IsDeleted),
                     ActiveChatsCount = _context.ChatRequests.Count(c =>

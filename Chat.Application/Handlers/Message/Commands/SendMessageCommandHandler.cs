@@ -25,6 +25,17 @@ namespace Chat.Application.Handlers
             SendMessageCommand request,
             CancellationToken cancellationToken)
         {
+            // 1) Базовая валидация payload
+            if (!Enum.IsDefined(typeof(MessageTypeEnum), request.Type))
+                return Result<Guid>.Failure("Invalid message type");
+
+            var isText = request.Type == MessageTypeEnum.Text;
+            var isFile = request.Type == MessageTypeEnum.File;
+            var isImage = request.Type == MessageTypeEnum.Image;
+
+
+
+            // 2) Чат должен существовать
             var chat = await _context.ChatRequests
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.ChatRequestId &&
@@ -34,6 +45,7 @@ namespace Chat.Application.Handlers
             if (chat == null)
                 return Result<Guid>.Failure("Chat request not found");
 
+            // 3) Пользователь должен существовать
             var user = await _context.Users
                 .FirstOrDefaultAsync(x =>
                     x.Id == request.SenderUserId &&
@@ -43,6 +55,11 @@ namespace Chat.Application.Handlers
             if (user == null)
                 return Result<Guid>.Failure("User not found");
 
+            // 4) Запрет на сообщения в закрытый чат (если у тебя это правило есть)
+            if (chat.Status == ChatRequestStatusEnum.Closed)
+                return Result<Guid>.Failure("Chat is closed");
+
+            // 5) Проверка доступа
             bool hasAccess =
                 chat.FromDepartmentId == user.DepartmentId ||
                 chat.ToDepartmentId == user.DepartmentId ||
@@ -53,14 +70,15 @@ namespace Chat.Application.Handlers
             if (!hasAccess)
                 return Result<Guid>.Failure("You don't have access to this chat");
 
+            // 6) Создание сообщения
             var message = new MessageModel
             {
                 Id = Guid.NewGuid(),
                 ChatRequestId = request.ChatRequestId,
                 SenderUserId = request.SenderUserId,
                 Type = request.Type,
-                Text = request.Text,
-                FileUrl = request.FileUrl,
+                Text = isText ? request.Text?.Trim() : null,
+                FileUrl = (isFile || isImage) ? request.FileUrl : null,
                 IsRead = false,
                 SentAt = DateTime.UtcNow,
                 IsDeleted = false
@@ -68,6 +86,7 @@ namespace Chat.Application.Handlers
 
             await _context.Messages.AddAsync(message, cancellationToken);
 
+            // 7) Обновление статуса чата
             if (chat.Status == ChatRequestStatusEnum.Sent)
                 chat.Status = ChatRequestStatusEnum.Viewed;
 
@@ -75,7 +94,7 @@ namespace Chat.Application.Handlers
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // ✅ REALTIME
+            // 8) REALTIME: сообщение
             await _rt.MessageSent(chat.Id, new
             {
                 id = message.Id,
@@ -89,7 +108,7 @@ namespace Chat.Application.Handlers
                 sentAt = message.SentAt
             }, cancellationToken);
 
-            // ✅ для списка чатов (если фронт показывает last message / counters)
+            // 9) REALTIME: обновление чата
             await _rt.ChatUpdated(chat.Id, new
             {
                 chatId = chat.Id,

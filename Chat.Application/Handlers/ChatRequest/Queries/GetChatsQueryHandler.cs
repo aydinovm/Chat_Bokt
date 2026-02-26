@@ -40,7 +40,7 @@ namespace Chat.Application.Handlers
             else if (isDeptAdmin)
             {
                 // ✅ DepartmentAdmin видит входящие своего департамента
-                query = query.Where(x => x.ToDepartmentId == user.DepartmentId);
+                    query = query.Where(x => x.ToDepartmentId == user.DepartmentId || x.FromDepartmentId == user.DepartmentId);
             }
             else
             {

@@ -18,7 +18,7 @@ namespace Chat.API.Controllers
 
         [HttpGet]
         public async Task<ActionResult<List<ChatReassignmentHistoryResponse>>> GetHistory(Guid chatRequestId)
-        {
+            {
             var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
             var query = new GetChatReassignmentHistoryQuery

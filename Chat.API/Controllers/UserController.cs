@@ -49,7 +49,7 @@ namespace Chat.API.Controllers
 
         [HttpGet]
         public async Task<ActionResult<List<UserResponse>>> GetAll([FromQuery] Guid? departmentId)
-        {
+         {
 
             var query = new GetAllUsersQuery { DepartmentId = departmentId };
             var result = await Mediator.Send(query);
