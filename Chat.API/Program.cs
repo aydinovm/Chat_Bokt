@@ -1,5 +1,5 @@
 ﻿using Chat.API.Extensions;
-using Chat.API.Hubs;              // ✅ добавь
+using Chat.API.Hubs;
 using Chat.Application.Handlers;
 using Chat.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,13 +9,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
-
-// ✅ SignalR (обязательно, иначе IHubContext не зарегистрируется)
 builder.Services.AddSignalR();
 
-// Swagger/OpenAPI configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -26,9 +22,8 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        Description = "JWT Authorization header using the Bearer scheme."
     });
-
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -45,12 +40,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Database Context
 var connectionString = builder.Configuration.GetSection("Connections:0:ChatConnection").Value;
 builder.Services.AddDbContext<CoreDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,39 +63,36 @@ builder.Services.AddAuthentication(options =>
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
         ClockSkew = TimeSpan.Zero
     };
-
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
                 context.Token = accessToken;
-
             return Task.CompletedTask;
         }
     };
 });
 
 builder.Services.AddAuthorization();
-
-// Application Services
 builder.Services.AddAppServices(builder.Configuration);
-
-// MediatR
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(LoginCommandHandler).Assembly));
 
-// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowFront", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
@@ -115,15 +105,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseCors("AllowAll");
-
+app.UseCors("AllowFront");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
-// ✅ Map Hub (без этого фронт не подключится)
 app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
