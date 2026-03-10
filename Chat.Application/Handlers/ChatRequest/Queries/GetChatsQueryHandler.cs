@@ -8,8 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chat.Application.Handlers
 {
-    public class GetChatsQueryHandler
-        : IRequestHandler<GetChatsQuery, List<ChatRequestResponse>>
+    public class GetChatsQueryHandler : IRequestHandler<GetChatsQuery, List<ChatRequestResponse>>
     {
         private readonly CoreDbContext _context;
 
@@ -35,28 +34,32 @@ namespace Chat.Application.Handlers
 
             if (isSuperAdmin)
             {
-                // ✅ SuperAdmin(Control) видит всё
+                // SuperAdmin видит всё
             }
             else if (isDeptAdmin)
             {
-                // ✅ DepartmentAdmin видит входящие своего департамента
-                    query = query.Where(x => x.ToDepartmentId == user.DepartmentId || x.FromDepartmentId == user.DepartmentId);
+                query = query.Where(x => x.ToDepartmentId == user.DepartmentId || x.FromDepartmentId == user.DepartmentId);
             }
             else
             {
-                // ✅ Employee видит только свои (созданные им) + где он исполнитель
                 query = query.Where(x => x.CreatedByUserId == user.Id || x.AssignedToUserId == user.Id);
             }
 
-            // optional: фильтр только “открытые”
             if (request.OnlyOpen == true)
             {
                 query = query.Where(x => x.Status != ChatRequestStatusEnum.Resolved
                                       && x.Status != ChatRequestStatusEnum.Closed);
             }
 
+            // ✅ сортировка по последнему сообщению, если сообщений нет — по CreatedDate
+            query = query.OrderByDescending(x =>
+                _context.Messages
+                    .Where(m => m.ChatRequestId == x.Id)                 // <-- проверь имя поля
+                    .Max(m => (DateTime?)m.SentAt)                       // <-- проверь имя поля
+                ?? x.CreatedDate
+            );
+
             return await query
-                .OrderByDescending(x => x.CreatedDate)
                 .Select(x => new ChatRequestResponse
                 {
                     Id = x.Id,
@@ -66,7 +69,43 @@ namespace Chat.Application.Handlers
                     CreatedByUserId = x.CreatedByUserId,
                     FromDepartmentId = x.FromDepartmentId,
                     ToDepartmentId = x.ToDepartmentId,
-                    AssignedToUserId = x.AssignedToUserId
+
+                    AssignedToUserId = x.AssignedToUserId,
+
+                    AssignedToFullName = _context.Users
+                        .Where(u => u.Id == x.AssignedToUserId && !u.IsDeleted)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+
+                    AssignedToUserName = _context.Users
+                        .Where(u => u.Id == x.AssignedToUserId && !u.IsDeleted)
+                        .Select(u => u.Username)
+                        .FirstOrDefault(),
+
+                    // ✅ last message fields
+                    LastMessageText = _context.Messages
+                        .Where(m => m.ChatRequestId == x.Id)             // <-- проверь имя поля
+                        .OrderByDescending(m => m.SentAt)                 // <-- проверь имя поля
+                        .Select(m => m.Text ?? (m.FileUrl != null ? "Файл" : "")) // <-- проверь имена
+                        .FirstOrDefault(),
+
+                    LastMessageSenderUserId = _context.Messages
+                        .Where(m => m.ChatRequestId == x.Id)
+                        .OrderByDescending(m => m.SentAt)
+                        .Select(m => (Guid?)m.SenderUserId)              // <-- проверь имя поля
+                        .FirstOrDefault(),
+
+                    LastMessageIsRead = _context.Messages
+                        .Where(m => m.ChatRequestId == x.Id)
+                        .OrderByDescending(m => m.SentAt)
+                        .Select(m => m.IsRead)                           // <-- проверь имя поля
+                        .FirstOrDefault(),
+
+                    LastMessageAt = _context.Messages
+                        .Where(m => m.ChatRequestId == x.Id)
+                        .OrderByDescending(m => m.SentAt)
+                        .Select(m => (DateTime?)m.SentAt)
+                        .FirstOrDefault(),
                 })
                 .ToListAsync(cancellationToken);
         }
