@@ -1,5 +1,7 @@
-﻿using Chat.API.Services;
+﻿using Chat.API.Realtime;
+using Chat.API.Services;
 using Chat.API.Services.Facades;
+using Chat.Application.Tags;
 using Chat.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,7 @@ namespace Chat.API.Extensions
         {
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddScoped<IJwtService, JwtService>();
+            services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
 
             services.AddScoped<AuthServiceFacade>();
         }

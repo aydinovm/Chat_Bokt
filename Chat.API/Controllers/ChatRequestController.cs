@@ -110,7 +110,7 @@ namespace Chat.API.Controllers
             return Ok();
         }
 
-        // =========================
+        // =========================    
         // PUT: api/chat-requests/{id}/close
         // (только SuperAdmin проверит handler)
         // =========================
