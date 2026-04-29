@@ -56,7 +56,7 @@ namespace Chat.Application.Handlers
                     OldAssignedUserName = x.OldAssignedUserId.HasValue
                         ? _context.Users.Where(u => u.Id == x.OldAssignedUserId).Select(u => u.FullName).FirstOrDefault()
                         : null,
-                    NewAssignedUserId = x.NewAssignedUserId,
+                    NewAssignedUserId = x.NewAssignedUserId ?? Guid.Empty,
                     NewAssignedUserName = _context.Users
                         .Where(u => u.Id == x.NewAssignedUserId)
                         .Select(u => u.FullName)

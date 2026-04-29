@@ -11,14 +11,14 @@
         public Guid? OldAssignedUserId { get; set; }
         public UserModel? OldAssignedUser { get; set; }
 
-        public Guid NewAssignedUserId { get; set; }
-        public UserModel NewAssignedUser { get; set; } = null!;
+        public Guid? NewAssignedUserId { get; set; }   // ← было Guid, стало Guid?
+        public UserModel? NewAssignedUser { get; set; } // ← было null!, стало nullable
 
-        // ✅ NEW: междеп аудит
         public Guid? OldToDepartmentId { get; set; }
-        public Guid NewToDepartmentId { get; set; }
+        public Guid? NewToDepartmentId { get; set; }   // ← было Guid, стало Guid?
 
         public string? Reason { get; set; }
+        public string? Comment { get; set; }           // ← добавь
         public DateTime ReassignedAt { get; set; }
         public bool IsDeleted { get; set; }
     }
