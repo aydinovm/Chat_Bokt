@@ -149,6 +149,31 @@ namespace Chat.Application.Handlers
                 modifiedDate = chat.ModifiedDate
             }, cancellationToken);
 
+            // ✅ REALTIME: всем в чате + новому исполнителю персонально
+            await _rt.ChatReassigned(chat.Id, new
+            {
+                chatId = chat.Id,
+                reassignedByUserId = actor.Id,
+                oldAssignedUserId = history.OldAssignedUserId,
+                newAssignedUserId = history.NewAssignedUserId,
+                reason = history.Reason,
+                reassignedAt = history.ReassignedAt,
+                toDepartmentId = chat.ToDepartmentId
+            }, cancellationToken);
+
+            await _rt.NotifyUser(newAssignee.Id, "ChatAssignedToYou", new
+            {
+                chatId = chat.Id
+            }, cancellationToken);
+
+            await _rt.ChatUpdated(chat.Id, new
+            {
+                chatId = chat.Id,
+                assignedToUserId = chat.AssignedToUserId,
+                toDepartmentId = chat.ToDepartmentId,
+                modifiedDate = chat.ModifiedDate
+            }, cancellationToken);
+
             return Result<Unit>.Success(Unit.Value);
         }
     }
